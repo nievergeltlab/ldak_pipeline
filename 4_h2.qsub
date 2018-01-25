@@ -1,0 +1,48 @@
+#!/bin/bash
+#PBS -V
+
+while getopts e:p:c:g:k:o:a:b:r: option
+do
+  case "${option}"
+    in
+      e) ldak=${OPTARG};;
+      p) pheno=${OPTARG};;
+      c) covar=${OPTARG};;
+      g) grm_inputdir=${OPTARG};;
+      k) keep=${OPTARG};;
+      o) output=${OPTARG};; #Output directory
+      a) append=${OPTARG};; #Append to filename
+      b) biastest=${OPTARG};;
+      r) prevalence=${OPTARG};;
+    esac
+done
+
+
+if [ $keep != "xxxx" ]
+then
+ keep_flag="--keep $keep"
+ echo "Retaining subjects in $keep"
+fi
+
+if [ $prevalence != "xxxx" ]
+then
+ prev_flag="--prevalence $prevalence"
+ echo "Prevalence set to $prevalence"
+fi
+
+
+if [ $biastest != "yes" ]
+then
+  $ldak --reml "$output"/"$append"full$j --grm "$grm_inputdir"/kinships_allchr --pheno $pheno --covar $covar --keep $keep   $prev_flag
+elif [ $biastest == "yes" ]
+then
+ #One quarter at a time
+ for j in {A,B,C,D}; do
+  $ldak --reml "$output"/"$append"quad$j --grm "$grm_inputdir"/kins$j --pheno $pheno --covar $covar --keep $keep  
+  echo "$grm_inputdir"/kins$j > listABCD
+ done
+ #All at once
+ $ldak --reml "$output"/"$append"quadALL --mgrm listABCD --pheno $pheno --covar $covar --keep $keep   
+fi
+
+ wait

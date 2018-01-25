@@ -1,0 +1,42 @@
+#!/bin/bash
+#PBS -V
+
+while getopts e:k:o:f:b: option
+do
+  case "${option}"
+    in
+      e) ldak=${OPTARG};; #LDAK binary location (full path)
+      k) kinslist=${OPTARG};; #Kinship matrix locations
+      o) output_dir=${OPTARG};; #Output data
+      f) kinship_filename=${OPTARG};; #Filename of kinship data. should just be called 'kinships'
+      b) biascheck=${OPTARG};;
+    esac
+done
+
+cp -r "$kinslist"/* "$TMPDIR"
+
+cd $TMPDIR
+
+for chr in {1..22} ; do echo "kinships_$chr" >> alljoinkins.list ; done
+ $ldak --add-grm kinships_allchr --mgrm alljoinkins.list --same-data NO
+
+cp -r kinships_allchr* "$output_dir"/.
+
+ 
+if [ $biascheck == "yes" ]
+then
+ #Make kinship for 1/4 of genome, for estimation of inflation
+ for j in {1..3};   do echo "kinships_$j" >> listA; done
+ for j in {4..7};   do echo "kinships_$j" >> listB; done
+ for j in {8..11};  do echo "kinships_$j" >> listC; done
+ for j in {12..22}; do echo "kinships_$j" >> listD; done
+
+ for j in {A,B,C,D}; do
+  $ldak --add-grm kins$j --mgrm list$j --same-data NO
+  cp  kins"$j"* "$output_dir"/.
+ done
+
+fi 
+
+
+ 

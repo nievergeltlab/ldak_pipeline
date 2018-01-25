@@ -1,0 +1,58 @@
+#!/bin/bash
+#PBS -V
+
+#Calculate who is related and get PCs for LDAK analysis
+
+while getopts e:p:k:r:g:n:o: option
+do
+  case "${option}"
+    in
+      e) ldak=${OPTARG};; #LDAK binary location (full path)
+      p) pheno=${OPTARG};; #Phenotype file (phenotyped subjects are retained preferentially. Set controls to missing to prefer to retain cases. Need a 2 level run if there is missing data and you want to prune that before pruning controls)      
+      k) keep=${OPTARG};; #keep flag for retaining subset of subjects after grm has been made
+      r) rel_cutoff=${OPTARG};; #relatedness cutoff for retaining subsets
+      g) kinship_matrix_location=${OPTARG};; #location on kinship matrices
+      n) sname=${OPTARG};; #studyname
+      o) kinship_pca_outdir=${OPTARG};; #outputs go here
+    esac
+done
+
+startdir=$(pwd)
+
+#Deal with relateds
+if [ $rel_cutoff != "xxxx" ]
+then
+ rel_flag="--max-rel $rel_cutoff"
+  echo "Filtering based on relatedness cutoff of $rel_cutoff"
+fi
+
+if [ $keep != "xxxx" ]
+then
+ keep_flag="--keep_flag $keep"
+ echo "Retaining subjects in $keep"
+fi
+
+if [ $pheno != "xxxx" ]
+then
+ pheno_flag="--pheno $pheno"
+ echo "Using pheno $pheno"
+fi
+
+#List all pruned kinship matrices, copy to tmpdir
+ls "$kinship_matrix_location"/"$sname"_*.grm.bin | sed 's/.grm.bin//g' > "$kinship_pca_outdir"/"$sname"_relatedness_grm.list
+cp "$kinship_matrix_location"/"$sname"_*.grm.bin "$TMPDIR"/. #Copy kinship matrices
+cp "$kinship_pca_outdir"/"$sname"_relatedness_grm.list "$TMPDIR"/. #Copy list of files
+cd "$TMPDIR"
+mkdir kgrm
+
+#Merge all pruned kinship matrices into one matrix. Same data is set to NO because they were not made from the same file
+$ldak --add-grm kgrm/"$sname"_relatedness --mgrm "$sname"_relatedness_grm.list --same-data NO
+
+#Remove out those related > minimum related, retaining cases, and keeping the GWAS subjects 
+$ldak --filter kgrm/"$sname"_relatedness_pruned --grm kgrm/"$sname"_relatedness $pheno_flag $keep_flag $rel_flag
+
+#Get first 20 PCs 
+$ldak --pca kgrm/"$sname"_relatedness_pruned --grm kgrm/"$sname"_relatedness --axes 20 --keep kgrm/"$sname"_relatedness_pruned.keep
+
+#Copy outputs to outdir
+cp kgrm/* "$kinship_pca_outdir"/.

@@ -1,0 +1,49 @@
+#!/bin/bash
+#PBS -V
+
+while getopts g:p:n:o:a:q:m: option
+do
+  case "${option}"
+    in
+      g) geno_dir=${OPTARG};;
+      p) p_loc=${OPTARG};;
+      n) sname=${OPTARG};;
+      o) outdir=${OPTARG};;
+      a) acgt=${OPTARG};;
+      q) geno_filter=${OPTARG};;
+      m) maf_filter=${OPTARG};;
+    esac
+done
+
+ if [ $acgt == "yes" ] 
+ then
+  acgtflag="--snps-only just-acgt"
+ fi
+     
+ chr="$PBS_ARRAYID"
+ mkdir "$TMPDIR"
+
+
+
+ ls $geno_dir | grep _"$chr".bed | sed 's/.bed//g'  | awk '{print $1".bed",$1".bim",$1".fam"}' > "$outdir"/"$sname"_"$chr".mergelist
+ mlist="$outdir"/"$sname"_"$chr".mergelist
+ for files in $(ls $geno_dir | grep _"$chr". ) 
+ do
+  cp "$geno_dir"/"$files" "$TMPDIR"/.
+ done
+
+ cp "$outdir"/"$sname"_"$chr".mergelist "$TMPDIR"/.
+
+ cd "$TMPDIR"
+ mkdir_merge
+ #Merge data sets
+ $p_loc --allow-no-sex --merge-list "$sname"_"$chr".mergelist --make-bed $acgtflag --out merge/"$sname"_"$chr" &>  "$outdir"/"$sname"_"$chr".mergelog  
+ 
+ #Quality filter data
+ $p_loc --bfile merge/"$sname"_"$chr" --geno $geno_filter --maf $maf_folder --make-bed --out "$sname"_"$chr"
+ 
+ cp "$TMPDIR"/"$sname"_"$chr".* "$outdir"/.
+ 
+
+
+

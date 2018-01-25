@@ -1,0 +1,49 @@
+#!/bin/bash
+#PBS -V
+
+while getopts e:l:p:n:g:o:w: option
+do
+  case "${option}"
+    in
+      e) ldak=${OPTARG};; #LDAK binary location (full path)
+      l) ldakmodel=${OPTARG};; #Use LDAK model or GCTA model? if using GCTA, no weights are used. I don't recommend using LDAK model with admixed people. 
+      p) power=${OPTARG};; #Set power for LDAK GRM calculation
+      n) sname=${OPTARG};; #Study name
+      g) genodir=${OPTARG};; #Directory of input genotypes used in GRM calculation
+      o) outdir=${OPTARG};; #Output folder location
+      w) weightdir=${OPTARG};;  #where weights are stored
+
+    esac
+done
+
+chr=$PBS_ARRAYID
+
+cp "$genodir"/"$sname"_"$chr".*  "$TMPDIR"/.
+
+cd $TMPDIR
+
+#Cut kinships for each chromosome
+$ldak --cut-kins kinships_"$chr" --bfile "$sname"_"$chr" --by-chr YES
+
+#Usage of weights and power?
+if [ $ldakmodel == "gcta" ]
+then
+  weights="--ignore-weights YES" 
+  power=-1
+  echo "Using GTCA model (unweighted, power = -1)"
+elif [ $ldakmodel == "unweighted" ]
+then
+  weights="--ignore-weights YES" 
+  echo "Using unweighted model with power = $power"
+else 
+  weights="--weights "$weightdir"/sections_"$chr"/weights.all"
+  echo "Using weights and power = $power"
+fi
+
+$ldak --calc-kins kinships_"$chr"  --bfile "$sname"_"$chr" $weights --power $power
+
+#Copy kinship and section data to output directory (will include weights with it)
+cp -r kinships_"$chr" "$outdir"/.
+
+
+ 

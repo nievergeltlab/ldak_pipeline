@@ -1,0 +1,60 @@
+#!/bin/bash
+#PBS -V
+
+while getopts e:k:o:g:n: option
+do
+  case "${option}"
+    in
+      e) ldak=${OPTARG};;
+      k) keep=${OPTARG};;
+      o) outdir_weights=${OPTARG};;
+      g) input_genotypes=${OPTARG};;
+      n) sname=${OPTARG};;
+      
+    esac
+done
+
+chr=$PBS_ARRAYID 
+
+if [ $keep != "xxxx" ]
+then
+ keep_flag="--keep $keep"
+ echo "Retaining list of subjects $keep for computation of weights"
+fi
+
+cp "$input_genotypes"/"$sname"_"$chr".*  "$TMPDIR"/.
+
+cd $TMPDIR
+
+#Cut up genome to calculate weights
+$ldak --cut-weights sections_"$chr" --bfile "$sname"_"$chr"  $keep_flag
+
+#Calculate weights for each section
+ncommands=$(cat sections_"$chr"/section.number)
+
+nodesize=16
+nodeuse=$(($nodesize ))
+totjobs=$(( ($ncommands + $nodeuse - 1 ) / $nodeuse ))
+
+#Increment I in the number of jobs
+#Increment J in the number of 
+for i in $(seq 1 1 $totjobs)
+do
+  jstart=$((($i-1)*$nodesize +1))
+  jstop=$(($i*$nodesize))
+
+  min=$([ $ncommands -le $jstop ] && echo "$ncommands" || echo "$jstop")
+  jstop=$min
+  for j in $(seq $jstart 1 $jstop)
+  do
+ 
+  $ldak --calc-weights sections_"$chr" --bfile "$sname"_"$chr"  --section $j $keep_flag &
+  echo $i $j
+ done
+ wait #wait for jobs to finish before starting next set
+done
+
+#Copy sections to outdir
+cp -r sections_"$chr" "$outdir_weights"/.
+
+
