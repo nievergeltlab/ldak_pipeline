@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -V
 
-while getopts e:p:c:g:k:o:a:b:r: option
+while getopts e:p:c:g:k:o:a:b:r:x: option
 do
   case "${option}"
     in
@@ -14,10 +14,19 @@ do
       a) append=${OPTARG};; #Append to filename
       b) biastest=${OPTARG};;
       r) prevalence=${OPTARG};;
+      x) lisa=${OPTARG};;
     esac
 done
 
 
+ if [ $lisa != "yes" ]
+ then
+  TMPDIR=$lisa
+ fi
+  if [ $TMPDIR == "" ]
+ then 
+  exit 110 #FAIL if tmpdir not set!"
+ fi
 if [ $keep != "xxxx" ]
 then
  keep_flag="--keep $keep"

@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -V
 
-while getopts e:l:p:n:g:o:w: option
+while getopts e:l:p:n:g:o:w:x: option
 do
   case "${option}"
     in
@@ -12,10 +12,18 @@ do
       g) genodir=${OPTARG};; #Directory of input genotypes used in GRM calculation
       o) outdir=${OPTARG};; #Output folder location
       w) weightdir=${OPTARG};;  #where weights are stored
-
+      x) lisa=${OPTARG};;
     esac
 done
 
+ if [ $lisa != "yes" ]
+ then
+  TMPDIR=$lisa
+ fi
+  if [ $TMPDIR == "" ]
+ then 
+  exit 110 #FAIL if tmpdir not set!"
+ fi
 chr=$PBS_ARRAYID
 
 cp "$genodir"/"$sname"_"$chr".*  "$TMPDIR"/.
@@ -46,4 +54,4 @@ $ldak --calc-kins kinships_"$chr"  --bfile "$sname"_"$chr" $weights --power $pow
 cp -r kinships_"$chr" "$outdir"/.
 
 
- 
+ rm "$TMPDIR"/*

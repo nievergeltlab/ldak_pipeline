@@ -3,7 +3,7 @@
 
 #Calculate who is related and get PCs for LDAK analysis
 
-while getopts e:p:k:r:g:n:o: option
+while getopts e:p:k:r:g:n:o:x: option
 do
   case "${option}"
     in
@@ -14,10 +14,19 @@ do
       g) kinship_matrix_location=${OPTARG};; #location on kinship matrices
       n) sname=${OPTARG};; #studyname
       o) kinship_pca_outdir=${OPTARG};; #outputs go here
+      x) lisa=${OPTARG};;
     esac
 done
 
-startdir=$(pwd)
+ if [ $lisa != "yes" ]
+ then
+  TMPDIR=$lisa
+ fi
+ 
+ if [ $TMPDIR == "" ]
+ then 
+  exit 110 #FAIL if tmpdir not set!"
+ fi
 
 #Deal with relateds
 if [ $rel_cutoff != "xxxx" ]
@@ -56,3 +65,6 @@ $ldak --pca kgrm/"$sname"_relatedness_pruned --grm kgrm/"$sname"_relatedness --a
 
 #Copy outputs to outdir
 cp kgrm/* "$kinship_pca_outdir"/.
+
+rm "$TMPDIR"/*
+rm -r "$TMPDIR"/kgrm

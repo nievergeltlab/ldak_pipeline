@@ -3,7 +3,7 @@
 
 #Calculate GRMs in LDAK, just for the relatedness analysis
 
-while getopts l:e:p:q:w:r:n:g:u:o: option
+while getopts l:e:p:q:w:r:n:g:u:o:x: option
 do
   case "${option}"
     in
@@ -17,9 +17,20 @@ do
       g) genodir=${OPTARG};; #Directory of genotypes used in GRM calculation
       u) useweights=${OPTARG};; #Use weights in computation of GRM
       o) outdir=${OPTARG};; #Output folder location
+      x) lisa=${OPTARG};;
     esac
 done
 
+ if [ $lisa != "yes" ]
+ then
+  TMPDIR=$lisa
+ fi
+ 
+ if [ $TMPDIR == "" ]
+ then 
+  exit 110 #FAIL if tmpdir not set!"
+ fi
+   
 #Set chromosome
 chr=$PBS_ARRAYID
 
@@ -54,3 +65,5 @@ fi
 mkdir kins
  $ldak --calc-kins-direct kins/"$sname"_"$chr" --bfile "$sname"_"$chr" $prune_flag $param --power $power
 cp kins/* $outdir/.
+rm "$TMPDIR"/*
+rm -f $TMPDIR/kins
