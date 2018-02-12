@@ -48,7 +48,7 @@ done
  $p_loc --allow-no-sex --merge-list "$outdir"/"$sname"_"$chr".mergelist --make-bed $acgtflag --out "$TMPDIR"/ZZ"$sname"_"$chr" 
  mv "$TMPDIR"/ZZ"$sname"_"$chr".log "$TMPDIR"/"$sname"_"$chr".log2
  #Quality filter data
- $p_loc --bfile "$TMPDIR"/ZZ"$sname"_"$chr" --geno $geno_filter --maf $maf_folder --make-bed --out "$TMPDIR"/"$sname"_"$chr"
+ $p_loc --bfile "$TMPDIR"/ZZ"$sname"_"$chr" --geno $geno_filter --maf $maf_filter --make-bed --out "$TMPDIR"/"$sname"_"$chr"
  
 
  cp "$TMPDIR"/"$sname"_"$chr".* "$outdir"/.
