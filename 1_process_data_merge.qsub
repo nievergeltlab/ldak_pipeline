@@ -33,9 +33,9 @@ done
  chr="$PBS_ARRAYID"
 
  echo $outdir
- ls $geno_dir | grep _"$chr".bed | sed 's/.bed//g'  | awk '{print $1".bed",$1".bim",$1".fam"}' > "$outdir"/"$sname"_"$chr".mergelist
+ ls $geno_dir | grep _chr"$chr".bim | sed 's/.bim//g'  | awk '{print $1".bed",$1".bim",$1".fam"}' > "$outdir"/"$sname"_"$chr".mergelist #adam: changed .bed .bim because i'll copy .ziped beds. Also had to add chr to filenames
  mlist="$outdir"/"$sname"_"$chr".mergelist
- for files in $(ls $geno_dir | grep _"$chr". ) 
+ for files in $(ls $geno_dir | grep _chr"$chr". ) 
  do
   cp "$geno_dir"/"$files" "$TMPDIR"/.
  done
@@ -43,7 +43,12 @@ done
  cp "$outdir"/"$sname"_"$chr".mergelist "$TMPDIR"/.
 
  cd "$TMPDIR"
-
+ #Adam: unzip bed.gz files
+ for files in $(ls | grep .gz)
+ do
+  gzip -d $files
+ done 
+ 
  #Merge data sets
  $p_loc --allow-no-sex --merge-list "$outdir"/"$sname"_"$chr".mergelist --make-bed $acgtflag --out "$TMPDIR"/ZZ"$sname"_"$chr" 
  mv "$TMPDIR"/ZZ"$sname"_"$chr".log "$TMPDIR"/"$sname"_"$chr".log2
@@ -52,7 +57,12 @@ done
  
 
  cp "$TMPDIR"/"$sname"_"$chr".* "$outdir"/.
-rm "$TMPDIR"/*
+ 
+  if [ $lisa != "yes" ]
+ then
+   rm "$TMPDIR"/* #TMPDIR=$lisa
+ fi
+
 
 
 

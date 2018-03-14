@@ -46,7 +46,12 @@ then
  done
 
 fi 
-rm "$TMPDIR"/*
+
+ if [ $lisa != "yes" ]
+ then
+  rm "$TMPDIR"/*
+ fi
+
  
 
  

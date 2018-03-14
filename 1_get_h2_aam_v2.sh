@@ -1,25 +1,25 @@
 ### LDAK SNP based heritability estimates
+#Note fix mrs data, aam files are in there twice, but once saved as 'eur'
+#I've pulled out the AAM datasets into a folder
+# for study in mrsc safr dnhs gsdc fscd cogb nss1 nss2 pts1 stro psy3 meg2 gtpc comc grac wrby
+# do
+ # tar xvf /archive/maihofer/dac/"$study"_aam_cogbgfile_v1.tar --strip-components=5
+# done
 
-# #Get all genotypes
- # for study in  coga # nss2  # betr brya cogb comc fscd ftca gali grac gsdc gtpc meg2 minv mrsc nhrv nhs2 nss1 onga pris pts1 psy2 psy3 psy4 ring stro wrby
- # do
-  # tar xvf /archive/maihofer/dac/"$study"_eur_cogbgfile_v1.tar --strip-components=5
- # done
-# #Get all PCs
- # for study in coga #  nss2 #  betr brya cogb comc fscd ftca gali grac gsdc gtpc meg2 minv mrsc nhrv nhs2 nss1 nns2 onga ppds pris pts1 psy2 psy3 psy4 ring stro wrby
- # do
-  # tar zxvf /archive/maihofer/dac/"$study"_qcbfile_v1.tgz --wildcards "*.mds_cov" --strip-components=2
- # done
-#extract anything i forgot..
+# for study in mrsc safr dnhs gsdc fscd cogb nss1 nss2 pts1 stro psy3 meg2 gtpc comc grac wrby
+# do
+ # tar zxvf /archive/maihofer/dac/"$study"_qcbfile_v1.tgz --wildcards "*.mds_cov" --strip-components=2
+
+# done
+
 # tar xvzf /archive/maihofer/gsdc_qc_v2_mar12_2017.tgz   --strip-components=3 --wildcards "*.mds_cov" 
 # tar xvzf /archive/maihofer/mrsc_qc_v2_mar12_2017.tgz   --strip-components=3 --wildcards "*.mds_cov" 
 # tar xvzf /archive/maihofer/pts1_qc_v2_mar12_2017.tgz   --strip-components=3 --wildcards "*.mds_cov" 
 
-#Combine mds files into list of analyze subjects
-cat mds_cov/* | awk '{print $1,$2}' > eur_analyzed.subjects
+#cat mds_cov/* | awk '{print $1,$2}' > aam_analyzed.subjects
 
 #Set working directory 
-wd=/home/maihofer/ldakeur
+wd=/home/maihofer/ldak
 
 #Call into it
  cd $wd
@@ -40,15 +40,15 @@ fi
  
 
 #Put location of LDAK binary here
- ldak=/home/maihofer/ldak/ldak5.linux
+ ldak="$wd"/ldak5.linux
 #Location of multithread ldak
- ldakf=/home/maihofer/ldak/ldak5.linux.fast
+ ldakf="$wd"/ldak5.linux.fast
  
 #Put location of PLINK1.9 binary here
- p_loc=/home/maihofer/ldak/plink
+ p_loc="$wd"/plink
  
 #Name of your study (all outputs will have this name)
- sname=eurptsd
+ sname=aamptsd
 
 #Set and make directories for outputs. Copy and paste this part, just leave as defaults. 
 
@@ -70,7 +70,6 @@ fi
  combkinship_dir="$wd"/combined_kinships
  #4: LDAK results
  ldak_resultsdir="$wd"/results
- 
  if [ ! -e $outdir_mgeno ]
  then
   mkdir $outdir_mgeno
@@ -99,7 +98,7 @@ fi
  then
   mkdir  $ldak_resultsdir
  fi
-   if [ ! -e snplist ]
+ if [ ! -e snplist ]
  then
   mkdir  snplist
  fi
@@ -118,12 +117,12 @@ fi
 #maf: filter on this MAF
  mafthresh=0.01
 
-
+ #PUT IN FILTERS IN CODE 
 #Merge all datasets together (one job per chromosome)
 
 #Note: By default this will export only SNPs with ACGT alleles (As of writing, LDAK does not like alleles with more than 1 character)
 #If you don't want to do this, set -a to no. But to avoid errors I recommend just leaving this as is
- qsub -t1-22  -l walltime=00:45:00 scripts/1_process_data_merge.qsub -d $wd -e errandout/ -o errandout/ -F "-g $starting_geno_dir -p $p_loc -n $sname -o $outdir_mgeno -a yes -q $gtthresh -m $mafthresh -x $lisa" 
+ qsub -t1-22  -l walltime=00:15:00 scripts/1_process_data_merge.qsub -d $wd -e errandout/ -o errandout/ -F "-g $starting_geno_dir -p $p_loc -n $sname -o $outdir_mgeno -a yes -q $gtthresh -m $mafthresh -x $lisa" 
 
  #Calculate for snplist at different mafs, cutoffs
  
@@ -163,17 +162,17 @@ fi
  #Note: xxxx is what optional parameters should be set to if you want to ignore them
  rel_cutoff=xxxx #For relatedness, by default LDAK filters using the threshold c, where -c is smallest observed kinship. To set this value manually, set -r to a value from 0 to 1.
  pheno_file=xxxx #Phenotype file (phenotyped subjects are retained preferentially. If you specify a pheno file, when it finds a related pair, it will prefer to keep the phenotyped subject. 
- keepfile="$wd"/eur_analyzed.subjects #keep flag for retaining custom subset of people. If you specify a keep file, subjects NOT in this file will be removed from analysis
+ keepfile="$wd"/aam_analyzed.subjects #keep flag for retaining custom subset of people. If you specify a keep file, subjects NOT in this file will be removed from analysis
  kinship_matrix_location=$outdir_relatedness #Output of kinship analysis (PCAs, grm, etc)
  outdir_kinship_grm="$wd"/relatedness
- qsub -l walltime=02:00:00 scripts/2a2_merge_related_grm.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -p $pheno_file -k $keepfile -r $rel_cutoff -g  $kinship_matrix_location -n $sname -o $outdir_kinship_grm -x $lisa" 
+ qsub -l walltime=00:15:00 scripts/2a2_merge_related_grm.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -p $pheno_file -k $keepfile -r $rel_cutoff -g  $kinship_matrix_location -n $sname -o $outdir_kinship_grm -x $lisa" 
 
  #Recalcualte relatedness PCs in just a set pool of subjects
   max_rel=.2
   append_name=_allgwas
-  qsub -l walltime=01:30:00 scripts/2a3_calcualte_pcs_only.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -p $pheno_file -k $keepfile -r $max_rel -g  $kinship_matrix_location -n $sname -o $outdir_kinship_grm -x $lisa -z $append_name" 
+  qsub -l walltime=00:20:00 scripts/2a3_calcualte_pcs_only.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -p $pheno_file -k $keepfile -r $max_rel -g  $kinship_matrix_location -n $sname -o $outdir_kinship_grm -x $lisa -z $append_name" 
 
- 
+  
 ##2B: Prepare phenotype and covariates data.
  #NOte: add study covariate as you did in the Raj analysis
  #Program parameter settings
@@ -182,11 +181,15 @@ cat genotypes/*_chr22.fam | awk '{print $1,$2,$6}' | cat header_pheno.txt - > "$
 cat genotypes/*_chr22.fam | awk '{if($5 == "1") print $1,$2,$6}' | cat header_pheno.txt -   > "$sname"_males.pheno
 cat genotypes/*_chr22.fam | awk '{if($5 == "2") print $1,$2,$6}' | cat header_pheno.txt -  > "$sname"_females.pheno
 
- cat mds_cov/*nhs2* mds_cov/*coga*  mds_cov/*cogb* mds_cov/*grac*  mds_cov/pts_pts1_mix_am-qc-eu3_pca.menv.mds_cov mds_cov/pts_psy3_mix_am-qc-eu3_pca.menv.mds_cov mds_cov/pts_psy3_mix_am-qc-eu4_pca.menv.mds_cov mds_cov/*gtpc* mds_cov/pts_psy2nhs2_mix_am-qc-eur_pca.menv.mds_cov mds_cov/pts_meg2_mix_am-qc-eu1_pca.menv.mds_cov | awk '{print $1,$2}' > "$sname"_males.exclude
- cat mds_cov/*ring* mds_cov/*cogb* mds_cov/*coga* mds_cov/*betr*  mds_cov/*comc*   mds_cov/*ftca* mds_cov/*onga* mds_cov/*pris*  mds_cov/*gali* mds_cov/*minv* mds_cov/*wrby*  mds_cov/*stro*   mds_cov/*mrsc* | awk '{print $1,$2}' > "$sname"_females.exclude
+
+ cat mds_cov/*cogb* mds_cov/*comc*  mds_cov/*meg2* mds_cov/*grac* mds_cov/*pts1* mds_cov/*safr* | awk '{print $1,$2}' > "$sname"_males.exclude
+ cat mds_cov/*cogb* mds_cov/*comc*  mds_cov/*meg2* mds_cov/*grac* mds_cov/*pts1* mds_cov/*safr*  mds_cov/*nss1* mds_cov/*ppds*  | awk '{print $1,$2}' > "$sname"_males_nonss.exclude
+ cat mds_cov/*cogb* mds_cov/*comc* mds_cov/*grac* mds_cov/pts_meg2_mix_am-qc-af1_pca.menv.mds_cov  mds_cov/*mrsc*   mds_cov/*mrsc* mds_cov/*ppds* mds_cov/*pts1*  mds_cov/*stro*  mds_cov/*wrby* | awk '{print $1,$2}' > "$sname"_females.exclude
  
+ rm "$sname".studyindicator
  
-  for files in $(ls mds_cov | grep -v unused)
+ #Make study indicator variable by trolling the mds cov folder
+ for files in $(ls mds_cov | grep -v unused)
  do
   fname=$(echo $files | awk -F"_|-" '{print $2_$6}' )
   echo $fname
@@ -194,7 +197,8 @@ cat genotypes/*_chr22.fam | awk '{if($5 == "2") print $1,$2,$6}' | cat header_ph
  done
   awk '{if(NR == 1) $3="studycov"; if(NR == 1 || $1 != "FID") print}' "$sname".studyindicator > "$sname".studyindicator_use
   
-  
+
+
  pca_file="$outdir_kinship_grm"/"$sname"_relatedness_pruned_allgwas.vect  #PCA file from last analysis
  exclusions="$sname"_females.exclude #xxxx # pgc_aam.exclude
  phenofile="$sname"_females.pheno #Phenotpye file should be blankspace delimited. It should have columns 1 and 2 be FID and IID. It must have a header. Put phenotype and covariates in here
@@ -204,6 +208,7 @@ cat genotypes/*_chr22.fam | awk '{if($5 == "2") print $1,$2,$6}' | cat header_ph
  studycov="$sname".studyindicator_use #INclude study covariate. Assumes samples in phenotpye file are named by ricopili ID
  phenooutname="$sname"_20rel_females #output filename of pheno and covs
  Rscript scripts/make_ldak_pheno.r $pca_file $exclusions $npcs $phenofile $phenoname $covar_names $studycov $phenooutname
+  
   
 ###Step 3: Make GRM for analysis
 
@@ -216,7 +221,7 @@ cat genotypes/*_chr22.fam | awk '{if($5 == "2") print $1,$2,$6}' | cat header_ph
  
  weightings_keepflag="$outdir_relatednessa"/"$sname"_relatedness_pruned.keep #Put a list of subjects if you want to calculate weights in just a subset of subjects, namely the pruned subject list
 
- qsub -t1-22 -l walltime=00:30:00 scripts/3_ldak_weights.qsub -d $wd -e errandout/ -o errandout/  -F "-e $ldak -g $outdir_mgeno -n $sname -k $weightings_keepflag -o $outdir_weights -x $lisa "
+ qsub -t1-22 -l walltime=00:30:00 scripts/3_ldak_weights.qsub -d $wd -e errandout/ -o errandout/  -F "-e $ldak -g $outdir_mgeno -n $sname -k $weightings_keepflag -o $outdir_weights -x $lisa"
 
 #Join weightings (Should be very quick,maybe not even needed to run job script)
  for chr in {1..22} ; do $ldak --join-weights  "$outdir_weights"/sections_$chr --bfile "$outdir_mgeno"/"$sname"_"$chr" ; done ; 
@@ -230,87 +235,123 @@ cat genotypes/*_chr22.fam | awk '{if($5 == "2") print $1,$2,$6}' | cat header_ph
 
  #40 min for chr 8-22, 1:30 for 1-7, for 12k subjects
  snplist="$wd"/snplist/"$sname"_maf01geno95
- qsub -t1-7 -l walltime=03:00:00 scripts/3B_ldak_kinship_v2_alt_maf.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -l $ldakmodel -p $power -n $sname -g $outdir_mgeno -o $kinship_dir -p $power -w $outdir_weights -x $lisa -z $snplist"
- qsub -t8-22 -l walltime=02:00:00 scripts/3B_ldak_kinship_v2_alt_maf.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -l $ldakmodel -p $power -n $sname -g $outdir_mgeno -o $kinship_dir -p $power -w $outdir_weights -x $lisa -z $snplist"
+ qsub -t1-7 -l walltime=02:00:00 scripts/3B_ldak_kinship_v2_alt_maf.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -l $ldakmodel -p $power -n $sname -g $outdir_mgeno -o $kinship_dir -p $power -w $outdir_weights -x $lisa -z $snplist"
+ qsub -t8-22 -l walltime=01:00:00 scripts/3B_ldak_kinship_v2_alt_maf.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -l $ldakmodel -p $power -n $sname -g $outdir_mgeno -o $kinship_dir -p $power -w $outdir_weights -x $lisa -z $snplist"
+ qsub -t22 -l walltime=00:05:00 scripts/3B_ldak_kinship_v2_alt_maf.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -l $ldakmodel -p $power -n $sname -g $outdir_mgeno -o $kinship_dir -p $power -w $outdir_weights -x $lisa -z $snplist"
 
  #Make kinships for other MAF settings
 
   mkdir "$kinship_dir"/"maf10"
   snplist="$wd"/snplist/"$sname"_maf10geno95
- qsub -t1-7 -l walltime=03:00:00 scripts/3B_ldak_kinship_v2_alt_maf.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -l $ldakmodel -p $power -n $sname -g $outdir_mgeno -o "$kinship_dir"/"maf10" -p $power -w $outdir_weights -x $lisa -z $snplist"
- qsub -t8-22 -l walltime=02:00:00 scripts/3B_ldak_kinship_v2_alt_maf.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -l $ldakmodel -p $power -n $sname -g $outdir_mgeno -o "$kinship_dir"/"maf10" -p $power -w $outdir_weights -x $lisa -z $snplist"
+ qsub -t1-7 -l walltime=02:00:00 scripts/3B_ldak_kinship_v2_alt_maf.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -l $ldakmodel -p $power -n $sname -g $outdir_mgeno -o "$kinship_dir"/"maf10" -p $power -w $outdir_weights -x $lisa -z $snplist"
+ qsub -t8-22 -l walltime=01:00:00 scripts/3B_ldak_kinship_v2_alt_maf.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -l $ldakmodel -p $power -n $sname -g $outdir_mgeno -o "$kinship_dir"/"maf10" -p $power -w $outdir_weights -x $lisa -z $snplist"
+
+ mkdir "$kinship_dir"/"maf10_a25"
+ snplist="$wd"/snplist/"$sname"_maf10geno95
+ ldakmodel=unweighted #If value set to gcta, no weights are used and power is set to -1. If set to 'unweighted', no weights will be used (power can be set with power). Otherwise, weights will be used
+ power=-0.25 #Set power for LDAK GRM calculation. Speed recommends -0.25. GCTA is -1.
+ qsub -t1-7 -l walltime=02:00:00 scripts/3B_ldak_kinship_v2_alt_maf.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -l $ldakmodel -p $power -n $sname -g $outdir_mgeno -o "$kinship_dir"/"maf10_a25" -p $power -w $outdir_weights -x $lisa -z $snplist"
+ qsub -t8-22 -l walltime=01:00:00 scripts/3B_ldak_kinship_v2_alt_maf.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -l $ldakmodel -p $power -n $sname -g $outdir_mgeno -o "$kinship_dir"/"maf10_a25" -p $power -w $outdir_weights -x $lisa -z $snplist"
 
  
 #3C: Merge GRMs into entire autosome GRM (inputs: a GRM list and output file name)
 
 #Program parameters:
  biascheck=yes #Set to yes if you want to calculate GRMs for 1/4 segments of the genome, to be used for estimating bias
- qsub -l walltime=00:55:00 scripts/3C_merge_kinships.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -k $kinship_dir -o $combkinship_dir -f kinships -b $biascheck -x $lisa"
+ qsub -l walltime=00:25:00 scripts/3C_merge_kinships.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -k $kinship_dir -o $combkinship_dir -f kinships -b $biascheck -x $lisa"
 
- 
  #Remove biascheck, just merge them...
  mkdir "$combkinship_dir"/maf10
- qsub -l walltime=00:55:00 scripts/3C_merge_kinships.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -k $kinship_dir -o $combkinship_dir -f kinships -b no -x $lisa"
- qsub -l walltime=00:55:00 scripts/3C_merge_kinships.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -k "$kinship_dir"/maf10 -o "$combkinship_dir"/maf10 -f kinships -b no -x $lisa"
+ qsub -l walltime=00:25:00 scripts/3C_merge_kinships.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -k $kinship_dir -o $combkinship_dir -f kinships -b no -x $lisa"
+ qsub -l walltime=00:25:00 scripts/3C_merge_kinships.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -k "$kinship_dir"/maf10 -o "$combkinship_dir"/maf10 -f kinships -b no -x $lisa"
+mkdir "$combkinship_dir"/maf10_a25
+  qsub -l walltime=00:25:00 scripts/3C_merge_kinships.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf -k "$kinship_dir"/maf10_a25 -o "$combkinship_dir"/maf10_a25 -f kinships -b no -x $lisa"
 
- 
+  
 ##4A: Heritablity estimates
 
 #Program parameters:
  phenotype="$sname"_ldak.pheno  #Phenofile file location
  covar="$sname"_ldak.cov #Covariate file location
  keeplist="$outdir_kinship_grm"/"$sname"_relatedness_pruned.keep  #If you want to prune extra subjects, beyond what was already done with the relatedness matrix and built into the phenotype file, do so here. E.g. for sex stratified analyses
- outname_append=sens_females #Extra output names to append
- prevalence=0.1 #Extra command to set prevalence for binary phenotypes, so h2 is on the right scale. NOT SURE what this does for quantitative phenotypes, if it is ignored or if it causes and error
- 
+ outname_append=sens #Extra output names to append
+
  qsub -l walltime=01:05:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p $phenotype -c $covar -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a $outname_append -b yes -r $prevalence -x $lisa"
 
 #Once this is done we can estimate the bias due to cryptic relatedness:
  grep Her_K "$ldak_resultsdir"/"$outname_append"quad{A,B,C,D,ALL}.reml | awk '(NR<=4){sum+=$2}(NR>4){sum2+=$2}END{I=(sum-sum2)/3;print "Inflation:", I, "=", I/sum2*100,"%"}'
 
 #Now we can do the actual estimate of h2 snp
- 
+
 #Now we can do the actual estimate of h2 snp
  outname_append=defrel_maf01
  prevalence=0.1 #Extra command to set prevalence, so h2 is on the right scale
  keeplist="$outdir_kinship_grm"/"$sname"_relatedness_pruned.keep 
- qsub -l walltime=01:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel.pheno -c "$sname"_defrel.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append" -b no -r $prevalence -x $lisa"
- qsub -l walltime=00:25:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_males.pheno -c "$sname"_defrel_males.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males -b no -r $prevalence -x $lisa"
- qsub -l walltime=00:25:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_females.pheno -c "$sname"_defrel_females.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_females -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel.pheno -c "$sname"_defrel.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append" -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_males.pheno -c "$sname"_defrel_males.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_females.pheno -c "$sname"_defrel_females.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_females -b no -r $prevalence -x $lisa"
 
  
  outname_append=20rel_maf01
  prevalence=0.1 #Extra command to set prevalence, so h2 is on the right scale
  keeplist="$outdir_kinship_grm"/"$sname"_relatedness_pruned_allgwas.keep 
- qsub -l walltime=01:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_20rel.pheno -c "$sname"_20rel.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append" -b no -r $prevalence -x $lisa"
- qsub -l walltime=00:25:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_20rel_males.pheno -c "$sname"_20rel_males.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males -b no -r $prevalence -x $lisa"
- qsub -l walltime=00:25:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_20rel_females.pheno -c "$sname"_20rel_females.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_females -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:05:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_20rel.pheno -c "$sname"_20rel.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append" -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:05:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_20rel_males.pheno -c "$sname"_20rel_males.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:05:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_20rel_females.pheno -c "$sname"_20rel_females.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_females -b no -r $prevalence -x $lisa"
 
  
  outname_append=defrel_maf10
  prevalence=0.1 #Extra command to set prevalence, so h2 is on the right scale
  keeplist="$outdir_kinship_grm"/"$sname"_relatedness_pruned.keep 
- qsub -l walltime=01:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel.pheno -c "$sname"_defrel.cov -g "$combkinship_dir"/maf10 -k $keeplist -o $ldak_resultsdir -a "$outname_append" -b no -r $prevalence -x $lisa"
- qsub -l walltime=00:25:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_males.pheno -c "$sname"_defrel_males.cov -g "$combkinship_dir"/maf10 -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males -b no -r $prevalence -x $lisa"
- qsub -l walltime=00:25:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_females.pheno -c "$sname"_defrel_females.cov -g "$combkinship_dir"/maf10 -k $keeplist -o $ldak_resultsdir -a "$outname_append"_females -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel.pheno -c "$sname"_defrel.cov -g "$combkinship_dir"/maf10 -k $keeplist -o $ldak_resultsdir -a "$outname_append" -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_males.pheno -c "$sname"_defrel_males.cov -g "$combkinship_dir"/maf10 -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_females.pheno -c "$sname"_defrel_females.cov -g "$combkinship_dir"/maf10 -k $keeplist -o $ldak_resultsdir -a "$outname_append"_females -b no -r $prevalence -x $lisa"
 
+ 
  
  outname_append=20rel_maf10
  prevalence=0.1 #Extra command to set prevalence, so h2 is on the right scale
  keeplist="$outdir_kinship_grm"/"$sname"_relatedness_pruned_allgwas.keep 
- qsub -l walltime=01:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_20rel.pheno -c "$sname"_20rel.cov -g "$combkinship_dir"/maf10 -k $keeplist -o $ldak_resultsdir -a "$outname_append" -b no -r $prevalence -x $lisa"
- qsub -l walltime=00:25:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_20rel_males.pheno -c "$sname"_20rel_males.cov -g "$combkinship_dir"/maf10 -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males -b no -r $prevalence -x $lisa"
- qsub -l walltime=00:25:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_20rel_females.pheno -c "$sname"_20rel_females.cov -g "$combkinship_dir"/maf10 -k $keeplist -o $ldak_resultsdir -a "$outname_append"_females -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_20rel.pheno -c "$sname"_20rel.cov -g "$combkinship_dir"/maf10 -k $keeplist -o $ldak_resultsdir -a "$outname_append" -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_20rel_males.pheno -c "$sname"_20rel_males.cov -g "$combkinship_dir"/maf10 -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_20rel_females.pheno -c "$sname"_20rel_females.cov -g "$combkinship_dir"/maf10 -k $keeplist -o $ldak_resultsdir -a "$outname_append"_females -b no -r $prevalence -x $lisa"
+
+  
+ outname_append=defrel_maf10_a25
+ prevalence=0.1 #Extra command to set prevalence, so h2 is on the right scale
+ keeplist="$outdir_kinship_grm"/"$sname"_relatedness_pruned.keep 
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel.pheno -c "$sname"_defrel.cov -g "$combkinship_dir"/maf10_a25 -k $keeplist -o $ldak_resultsdir -a "$outname_append" -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_males.pheno -c "$sname"_defrel_males.cov -g "$combkinship_dir"/maf10_a25 -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_females.pheno -c "$sname"_defrel_females.cov -g "$combkinship_dir"/maf10_a25 -k $keeplist -o $ldak_resultsdir -a "$outname_append"_females -b no -r $prevalence -x $lisa"
 
  
- 
- 
- #h2 can be found by grepping results, e.g..
- grep Her_K "$ldak_resultsdir"/"$outname_append"full.reml
 
-#Conversion of results onto liabiltiy scale (binary phenotypes), without having to run ldak multiple times
+ outname_append=defrel
+ keeplist="$outdir_kinship_grm"/"$sname"_relatedness_pruned.keep 
+ qsub -l walltime=00:25:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel.pheno -c "$sname"_defrel.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a $outname_append -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_males.pheno -c "$sname"_defrel_males.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_females.pheno -c "$sname"_defrel_females.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_females -b no -r $prevalence -x $lisa"
 
+ qsub -l walltime=00:10:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_males_nonss.pheno -c "$sname"_defrel_males_nonss.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males_nonss -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:10:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_males_nonmiss.pheno -c "$sname"_defrel_males_nonmiss.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males_nonmiss -b no -r $prevalence -x $lisa -j xxxx"
  
+  qsub -l walltime=00:10:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_males.pheno -c "$sname"_defrel_males.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males_constrained -b no -r $prevalence -x $lisa -j YES"
+ 
+ #I put teh new maf10 grm here for htis
+  qsub -l walltime=00:10:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_males.pheno -c "$sname"_defrel_males.cov -g "$combkinship_dir"/maf10 -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males_maf10 -b no -r $prevalence -x $lisa -j xxxx"
+ #and high genotyping : name may need fixing
+  qsub -l walltime=00:10:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_males.pheno -c "$sname"_defrel_males.cov -g "$combkinship_dir"/maf10genohigh -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males_maf10 -b no -r $prevalence -x $lisa -j xxxx"
+   qsub -l walltime=00:10:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_defrel_females.pheno -c "$sname"_defrel_females.cov -g "$combkinship_dir"/maf10genohigh -k $keeplist -o $ldak_resultsdir -a "$outname_append"_females_maf10geno -b no -r $prevalence -x $lisa -j xxxx"
+ 
+ 
+ qsub -l walltime=00:40:00  plink_assoc_test.sh -e errandout/ -o errandout/ 
+ 
+ outname_append=analysis2_allgwasp2
+ keeplist="$outdir_kinship_grm"/"$sname"_relatedness_pruned_allgwasp2.keep 
+ qsub -l walltime=00:25:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_lowrel.pheno -c "$sname"_lowrel.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a $outname_append -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_lowrel_males.pheno -c "$sname"_lowrel_males.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_males -b no -r $prevalence -x $lisa"
+ qsub -l walltime=00:15:00 scripts/4_h2.qsub -d $wd -e errandout/ -o errandout/ -F "-e $ldakf  -p "$sname"_lowrel_females.pheno -c "$sname"_lowrel_females.cov -g $combkinship_dir -k $keeplist -o $ldak_resultsdir -a "$outname_append"_females -b no -r $prevalence -x $lisa"
+
   for pop_prev in 0.1 0.5
   do
    for results1 in 20rel defrel 
@@ -353,3 +394,4 @@ cat genotypes/*_chr22.fam | awk '{if($5 == "2") print $1,$2,$6}' | cat header_ph
 done
  
 
+ 

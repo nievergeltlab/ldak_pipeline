@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -V
 
-while getopts e:l:p:n:g:o:w:x: option
+while getopts e:l:p:n:g:o:w:x:z: option
 do
   case "${option}"
     in
@@ -13,6 +13,8 @@ do
       o) outdir=${OPTARG};; #Output folder location
       w) weightdir=${OPTARG};;  #where weights are stored
       x) lisa=${OPTARG};;
+      z) snplist=${OPTARG};;
+            
     esac
 done
 
@@ -45,7 +47,13 @@ else
   echo "Using weights and power = $power"
 fi
 
-$ldak --calc-kins-direct kinships_"$chr"  --bfile "$sname"_"$chr" $weights --power $power
+ if [ $snplist != xxxx ]
+ then
+  echo "Including SNPlist" "$snplist"
+  extract="--extract "$snplist"_"$chr".snplist"
+ fi
+
+$ldak --calc-kins-direct kinships_"$chr"  --bfile "$sname"_"$chr" $weights --power $power $extract
 
 #Copy kinship and section data to output directory (will include weights with it)
 cp -r kinships_"$chr".* "$outdir"/.

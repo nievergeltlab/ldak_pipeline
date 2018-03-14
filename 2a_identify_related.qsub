@@ -3,7 +3,7 @@
 
 #Calculate GRMs in LDAK, just for the relatedness analysis
 
-while getopts l:e:p:q:w:r:n:g:u:o:x: option
+while getopts l:e:p:q:w:r:n:g:u:o:x:z: option
 do
   case "${option}"
     in
@@ -18,6 +18,7 @@ do
       u) useweights=${OPTARG};; #Use weights in computation of GRM
       o) outdir=${OPTARG};; #Output folder location
       x) lisa=${OPTARG};;
+      z) snplist=${OPTARG};;
     esac
 done
 
@@ -46,6 +47,11 @@ then
  param="--ignore-weights YES"
 fi
 
+ if [ $snplist != xxxx ]
+ then
+  echo "Including SNPlist" $snplist
+  extract="--extract "$snplist"_"$chr".snplist"
+ fi
 
 cp "$genodir"/"$sname"_"$chr".* "$TMPDIR"/.
  
@@ -57,13 +63,17 @@ cd $TMPDIR
 
 if [ $pruning != "xxxx" ]
 then
- $ldak --thin prune_"$chr" --bfile "$sname"_"$chr"  --window-kb $windowkb --window-prune $r2
+ $ldak --thin prune_"$chr" --bfile "$sname"_"$chr"  --window-kb $windowkb --window-prune $r2 $extract
  prune_flag="--extract prune_"$chr".in"
  echo "pruning to markers in $pruning"
 fi
 
 mkdir kins
  $ldak --calc-kins-direct kins/"$sname"_"$chr" --bfile "$sname"_"$chr" $prune_flag $param --power $power
-cp kins/* $outdir/.
-rm "$TMPDIR"/*
-rm -f $TMPDIR/kins
+cp -r kins/* $outdir/.
+
+ if [ $lisa != "yes" ]
+ then
+  rm "$TMPDIR"/*
+  rm -f $TMPDIR/kins
+ fi
